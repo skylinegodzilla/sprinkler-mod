@@ -1,0 +1,13 @@
+{
+  "itemGroup.sprinklermod": "Example Mod Tab",
+  "block.sprinklermod.example_block": "Example Block",
+  "item.sprinklermod.example_item": "Example Item",
+
+  "sprinklermod.configuration.title": "Sprinkler Mod Configs",
+  "sprinklermod.configuration.section.sprinklermod.common.toml": "Sprinkler Mod Configs",
+  "sprinklermod.configuration.section.sprinklermod.common.toml.title": "Sprinkler Mod Configs",
+  "sprinklermod.configuration.items": "Item List",
+  "sprinklermod.configuration.logDirtBlock": "Log Dirt Block",
+  "sprinklermod.configuration.magicNumberIntroduction": "Magic Number Text",
+  "sprinklermod.configuration.magicNumber": "Magic Number"
+}

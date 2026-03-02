@@ -98,20 +98,11 @@ public class SprinklerBlock extends Block {
     public void randomTick(BlockState state, ServerLevel level, BlockPos pos,
                            RandomSource random) {
 
-        // Only tick on the server side — clients don't run game logic
-        // ServerLevel is already server-only so this check is redundant
-        // but kept as a reminder that growth logic is server-side only
-
-        // TODO: Replace this stub with a real fluid check from GutterBlockEntity
-        // For now we always use water so we can test growth in-game
+        // TODO: Replace stub fluid with real check from GutterBlockEntity
         String fluidId = "water";
 
         // Delegate all growth logic to PlantGrowthTicker
-        // I do not grow plants myself — that is PlantGrowthTicker's job
-        PlantGrowthTicker.tickArea(
-                tier, fluidId,
-                pos.getX(), pos.getY(), pos.getZ()
-        );
+        PlantGrowthTicker.tickArea(tier, fluidId, level, pos);
     }
 
     /**

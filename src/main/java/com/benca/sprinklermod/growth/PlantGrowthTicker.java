@@ -1,95 +1,109 @@
 package com.benca.sprinklermod.growth;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.BonemealableBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * I apply growth ticks to plants within a sprinkler's coverage area.
  *
  * I am the bridge between the growth math (GrowthArea, GrowthHandler)
- * and the actual Minecraft world. I am the only place in the growth module
- * that will touch the Minecraft API when we wire things up.
+ * and the actual Minecraft world.
  *
- * WHY I AM SEPARATE FROM GrowthHandler:
- *   GrowthHandler knows HOW FAST plants should grow.
- *   I know HOW TO MAKE them grow.
- *   Keeping these separate means I can swap out either without
- *   touching the other.
+ * HOW I FIND PLANTS:
+ *   For each position in the coverage area, I cast a ray downward
+ *   through air blocks up to MAX_DROP_DISTANCE blocks.
+ *   When I hit a solid block I check if it's a plant.
+ *   If it is, I apply growth ticks to it.
  *
- * HOW I WORK:
- *   1. I receive a tier (tells me the area) and a fluid (tells me the speed)
- *   2. I ask GrowthArea for the list of positions to affect
- *   3. I ask GrowthHandler for the multiplier
- *   4. I apply that many random ticks to each plant I find
+ * WHY DOWNWARD RAYCAST:
+ *   This lets the sprinkler work at height — you can build the gutter
+ *   system overhead and the sprinkler will still reach crops on the ground
+ *   regardless of how high up it is (within MAX_DROP_DISTANCE).
  *
- * TODO: The actual Minecraft world calls are stubbed out below.
- *   When we wire up the block entity, replace the stub comments
- *   with real Level and BlockPos calls.
- *
- * CODE SMELL WARNING:
- *   String fluid identifier is a temporary placeholder.
+ * TODO: String fluid identifier is a temporary placeholder.
  *   Flagged for refactor when FluidRegistry is built.
  */
 public class PlantGrowthTicker {
 
+    /** I am the maximum number of blocks I will search downward for plants */
+    public static final int MAX_DROP_DISTANCE = 10;
+
     /**
-     * I attempt to grow all plants in the sprinkler's coverage area.
+     * I attempt to grow all plants beneath the sprinkler's coverage area.
      *
-     * Right now the Minecraft world calls are stubbed — this method
-     * shows the STRUCTURE of what will happen without needing
-     * the Minecraft API to compile and test the logic.
+     * For each position in the area I search downward for a plant
+     * and apply growth ticks if I find one.
      *
-     * @param tier      The sprinkler tier (determines coverage area)
-     * @param fluidId   The fluid being used (determines growth speed)
-     * @param centreX   The X world coordinate of the sprinkler
-     * @param centreY   The Y world coordinate of the sprinkler
-     * @param centreZ   The Z world coordinate of the sprinkler
+     * @param tier    The sprinkler tier (determines coverage area)
+     * @param fluidId The fluid being used (determines growth speed)
+     * @param level   The server world
+     * @param pos     The position of the sprinkler block itself
      */
     public static void tickArea(SprinklerTier tier, String fluidId,
-                                int centreX, int centreY, int centreZ) {
+                                ServerLevel level, BlockPos pos) {
 
         // Early exit — if this fluid has no effect, do nothing
-        if (!GrowthHandler.hasEffect(fluidId)) {
-            return;
-        }
+        if (!GrowthHandler.hasEffect(fluidId)) return;
 
         // Get how many extra ticks to apply per plant
-        float multiplier = GrowthHandler.getMultiplier(fluidId);
-        int extraTicks = calculateExtraTicks(multiplier);
+        int extraTicks = (int) GrowthHandler.getMultiplier(fluidId);
 
-        // Get every position in the coverage area
+        // Get every horizontal position in the coverage area
         List<int[]> positions = GrowthArea.getRelativePositions(tier);
 
-        // Apply growth ticks to each position
         for (int[] offset : positions) {
-            int worldX = centreX + offset[0];
-            int worldZ = centreZ + offset[1];
+            int worldX = pos.getX() + offset[0];
+            int worldZ = pos.getZ() + offset[1];
 
-            // TODO: Replace this stub with real Minecraft world call:
-            // BlockPos pos = new BlockPos(worldX, centreY - 1, worldZ);
-            // BlockState state = level.getBlockState(pos);
-            // if (state.getBlock() instanceof BonemealableBlock growable) {
-            //     for (int i = 0; i < extraTicks; i++) {
-            //         growable.performBonemeal(level, level.random, pos, state);
-            //     }
-            // }
-
-            // Temporary stub so we can see the logic working
-            System.out.println("Would tick block at: " + worldX + ", " + (centreY - 1) + ", " + worldZ
-                    + " | " + extraTicks + " extra ticks | fluid: " + fluidId);
+            // Search downward from directly below the sprinkler
+            tryGrowPlantBelow(level, worldX, pos.getY(), worldZ, extraTicks);
         }
     }
 
     /**
-     * I convert a growth multiplier into a number of extra random ticks.
+     * I search downward from a given position for a plant to grow.
      *
-     * A multiplier of 2.0 means I apply 2 ticks instead of 1.
-     * I round down — so 2.9 still means 2 ticks, not 3.
-     * If the multiplier is less than 1, I return 1 as the minimum.
+     * I travel down through air and fluid blocks up to MAX_DROP_DISTANCE.
+     * When I hit something solid I check if it is a plant.
+     * If it is, I apply the growth ticks.
      *
-     * @param multiplier  The growth speed multiplier from GrowthHandler
-     * @return            The number of ticks to apply
+     * @param level      The server world
+     * @param x          World X coordinate to search below
+     * @param startY     The Y coordinate to start searching from (the sprinkler's Y)
+     * @param z          World Z coordinate to search below
+     * @param extraTicks Number of growth ticks to apply
      */
-    private static int calculateExtraTicks(float multiplier) {
-        return Math.max(1, (int) multiplier);
+    private static void tryGrowPlantBelow(ServerLevel level,
+                                          int x, int startY, int z,
+                                          int extraTicks) {
+
+        for (int dropY = 1; dropY <= MAX_DROP_DISTANCE; dropY++) {
+            BlockPos checkPos = new BlockPos(x, startY - dropY, z);
+            BlockState state = level.getBlockState(checkPos);
+
+            // If this block is air or a fluid, keep searching downward
+            if (state.isAir() || !state.getFluidState().is(Fluids.EMPTY)) {
+                continue;
+            }
+
+            // We hit a solid block — check if it is a plant
+            if (state.getBlock() instanceof BonemealableBlock growable) {
+                // Check if this plant can actually grow right now
+                if (growable.isValidBonemealTarget(level, checkPos, state)) {
+                    for (int i = 0; i < extraTicks; i++) {
+                        growable.performBonemeal(level, level.random, checkPos, state);
+                    }
+                }
+            }
+
+            // Whether it was a plant or not, stop searching — we hit solid ground
+            break;
+        }
     }
 }

@@ -141,22 +141,4 @@ public class SprinklerBlock extends Block {
                     1.0f);
         }
     }
-
-    @Override
-    public void playerDestroy(Level level, Player player, BlockPos pos,
-                              BlockState state, BlockEntity blockEntity,
-                              ItemStack tool) {
-        super.playerDestroy(level, player, pos, state, blockEntity, tool);
-
-        // Play dying horse sound at the block's position
-        // ...your daughter's idea, not mine
-        if (!level.isClientSide() && tier == SprinklerTier.DIAMOND) {
-            SprinklerMod.LOGGER.info("playerDestroy called for diamond sprinkler");
-            level.playSound(null, player.blockPosition(),
-                    SoundEvents.HORSE_DEATH,
-                    SoundSource.PLAYERS,
-                    1.0f,
-                    1.0f);
-        }
-    }
 }

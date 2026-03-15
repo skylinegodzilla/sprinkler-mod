@@ -37,14 +37,28 @@ Fertilised water cannot form an infinite source — you need to maintain supply.
 
 ## How to set up a farm
 
-1. Place a **tank** next to a water source — it fills automatically *(coming soon)*
-2. Run **gutters** horizontally from the tank overhead across your farm
-3. Gutters can **waterfall** down to lower gutters by stacking them vertically
-4. Hang a **sprinkler** below the gutter line
-5. Plant your crops underneath
-6. Watch them grow
+1. Build a **tank** out of cauldrons in a rectangular shape above your farm *(coming soon)*
+2. Place flowing water adjacent to the tank — it fills automatically
+3. Run **gutters** horizontally from the tank overhead across your farm
+4. Gutters can **waterfall** down to lower gutters by stacking them vertically
+5. Hang a **sprinkler** below the gutter line
+6. Plant your crops underneath
+7. Watch them grow
 
-> Each tank feeds one line of gutters. For multiple rows you need multiple tanks.
+> Each water input sustains exactly 3 sprinklers. Plan your tank size accordingly.
+
+---
+
+## Tank System *(coming soon)*
+
+The tank is a multiblock structure built from cauldrons arranged in a rectangular shape — 1x1, 2x2, 3x3, 2x3 etc. No L-shapes or gaps allowed.
+
+- All cauldrons in the structure share one fluid pool
+- Each flowing water input fills the tank at 1 unit per 500 ticks
+- Each sprinkler drains the tank at 1 unit per 1500 ticks
+- **1 water input sustainably feeds exactly 3 sprinklers**
+- Cauldron fill level reflects the pool visually (empty, half, full)
+- When the tank runs dry gutters stop, particles stop, plants stop growing
 
 ---
 
@@ -64,6 +78,8 @@ Each active sprinkler shows two layers of particles:
 - **Coloured dots** on the ground surface showing the exact coverage area
   - Water — cyan at centre fading to deep blue at edges
   - Fertilised water — yellow at centre fading to deep green at edges *(coming soon)*
+
+Particles only show when the sprinkler is actively receiving fluid from a gutter.
 
 ---
 
@@ -97,11 +113,11 @@ Recipes are not yet implemented. Use `/give` to obtain items for now:
 
 ## Coming Soon
 
-- Fertilised water fluid
-- Tank block
+- Tank block (multiblock cauldron structure)
 - Crafting recipes for all blocks
 - Custom models and textures
 - Creative tab
+- Fertilised water fluid
 
 ---
 
@@ -125,26 +141,35 @@ Then open in IntelliJ and run the `runClient` configuration.
 
 ```
 src/main/java/com/benca/sprinklermod/
-├── SprinklerMod.java           # Main entry point — assembles modules
-├── SprinklerModClient.java     # Client side setup
-├── growth/                     # Pure logic, no Minecraft API
-│   ├── SprinklerTier.java      # Tier enum — radius and display names
-│   ├── GrowthHandler.java      # Fluid to growth multiplier map
-│   ├── GrowthArea.java         # Coverage area calculator
-│   └── PlantGrowthTicker.java  # Applies growth ticks to plants
-├── block/                      # Physical blocks
-│   ├── BlockRegistry.java      # Registers all blocks
-│   ├── SprinklerBlock.java     # Sprinkler block logic
-│   └── GutterBlock.java        # Gutter block
-├── blockentity/                # Stateful block data
+├── SprinklerMod.java                # Main entry point — assembles modules
+├── SprinklerModClient.java          # Client side setup
+├── growth/                          # Pure logic, no Minecraft API
+│   ├── SprinklerTier.java           # Tier enum — radius and display names
+│   ├── GrowthHandler.java           # Fluid to growth multiplier map
+│   ├── GrowthArea.java              # Coverage area calculator
+│   └── PlantGrowthTicker.java       # Applies growth ticks to plants
+├── block/                           # Physical blocks
+│   ├── BlockRegistry.java           # Registers all blocks
+│   ├── SprinklerBlock.java          # Sprinkler block logic
+│   └── GutterBlock.java             # Gutter block
+├── blockentity/                     # Stateful block data
 │   ├── BlockEntityRegistry.java
-│   └── GutterBlockEntity.java  # Fluid propagation chain
+│   ├── GutterBlockEntity.java       # Fluid propagation chain
+│   └── SprinklerBlockEntity.java    # Fluid gated growth + client sync
 ├── item/
-│   └── ItemRegistry.java       # Registers all block items
-└── client/                     # Visual effects only
+│   └── ItemRegistry.java            # Registers all block items
+└── client/                          # Visual effects only
     ├── SprinklerParticleHandler.java
     └── SprinklerParticleColour.java
 ```
+
+### Branch Strategy
+
+- `master` — always stable and working
+- `feature/xyz` — one branch per feature, merged back when tested
+
+Current feature branches:
+- `feature/tank-block` — multiblock cauldron tank system
 
 ### Running Tests
 
@@ -173,12 +198,22 @@ Nothing else needs to change — the growth and particle systems pick up new tie
 3. Add a case in `GrowthHandler.getMultiplier()`
 4. Add colour definitions in `SprinklerParticleColour.java`
 
+### Tank System Architecture
+
+The tank uses three classes:
+
+- `TankMultiblockValidator.java` — pure Java, validates rectangular shape, fully testable without launching the game
+- `TankBlock.java` — physical cauldron block, detects multiblock formation
+- `TankBlockEntity.java` — stores fluid pool, handles fill/drain, coordinates with master block
+
+The lowest corner cauldron acts as the **master block** and stores the shared fluid pool. All other cauldrons in the structure report to it.
+
 ---
 
 ## Known Issues
 
-- Sprinklers currently always use water even without a gutter connected — this will be fixed when `SprinklerBlockEntity` is built
-- Recipes not yet implemented
+- Crafting recipes not yet implemented
+- Tank block not yet implemented
 - Placeholder textures — custom models coming when assets are finalised in Blender
 
 ---

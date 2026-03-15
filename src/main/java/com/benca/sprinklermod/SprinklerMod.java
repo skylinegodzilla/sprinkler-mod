@@ -7,6 +7,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
+import com.benca.sprinklermod.blockentity.BlockEntityRegistry;
 
 /**
  * I am the main entry point for the Sprinkler Mod.
@@ -47,5 +48,6 @@ public class SprinklerMod {
         // Register the block module
         BlockRegistry.register(modEventBus);
         ItemRegistry.register(modEventBus);
+        BlockEntityRegistry.register(modEventBus);
     }
 }

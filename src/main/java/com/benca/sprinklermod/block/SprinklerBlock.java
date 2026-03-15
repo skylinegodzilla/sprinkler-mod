@@ -97,12 +97,9 @@ public class SprinklerBlock extends Block {
     @Override
     public void randomTick(BlockState state, ServerLevel level, BlockPos pos,
                            RandomSource random) {
-
-        // TODO: Replace stub fluid with real check from GutterBlockEntity
-        String fluidId = "water";
-
-        // Delegate all growth logic to PlantGrowthTicker
-        PlantGrowthTicker.tickArea(tier, fluidId, level, pos);
+        // TODO: Wire to SprinklerBlockEntity when built
+        // Disabled until fluid system is connected — gutter handles growth for now
+        // PlantGrowthTicker.tickArea(tier, fluidId, level, pos);
     }
 
     /**

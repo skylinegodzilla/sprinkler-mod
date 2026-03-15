@@ -40,10 +40,10 @@ public class GrowthHandler {
     public static final float MULTIPLIER_NONE           = 0.0f;
 
     /** Plain water — modest growth boost */
-    public static final float MULTIPLIER_WATER          = 2.0f;
+    public static final float MULTIPLIER_WATER          = 1.0f;
 
     /** Fertilised water (bonemeal + water) — strong growth boost */
-    public static final float MULTIPLIER_FERTILISED     = 10.0f;
+    public static final float MULTIPLIER_FERTILISED     = 20.0f;
 
     // -------------------------------------------------------------------------
     // Fluid identifier constants (temporary placeholders)

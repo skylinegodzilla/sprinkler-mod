@@ -50,7 +50,7 @@ public class BlockRegistry {
             BLOCKS.register("copper_sprinkler",
                     () -> new SprinklerBlock(SprinklerTier.COPPER,
                             BlockBehaviour.Properties.of()
-                                    .strength(1.5f)
+                                    .strength(0.1f, 8.0f)
                                     .sound(SoundType.COPPER)
                                     .requiresCorrectToolForDrops()));
 
@@ -59,7 +59,7 @@ public class BlockRegistry {
             BLOCKS.register("iron_sprinkler",
                     () -> new SprinklerBlock(SprinklerTier.IRON,
                             BlockBehaviour.Properties.of()
-                                    .strength(2.0f)
+                                    .strength(0.5f,8.0f)
                                     .sound(SoundType.METAL)
                                     .requiresCorrectToolForDrops()));
 
@@ -68,7 +68,7 @@ public class BlockRegistry {
             BLOCKS.register("gold_sprinkler",
                     () -> new SprinklerBlock(SprinklerTier.GOLD,
                             BlockBehaviour.Properties.of()
-                                    .strength(2.0f)
+                                    .strength(0.5f, 8.0f)
                                     .sound(SoundType.METAL)
                                     .requiresCorrectToolForDrops()));
 
@@ -77,8 +77,8 @@ public class BlockRegistry {
             BLOCKS.register("diamond_sprinkler",
                     () -> new SprinklerBlock(SprinklerTier.DIAMOND,
                             BlockBehaviour.Properties.of()
-                                    .strength(3.0f)
-                                    .sound(SoundType.BAMBOO_WOOD)
+                                    .strength(1.0f,8.0f)
+                                    .sound(SoundType.METAL)
                                     .requiresCorrectToolForDrops()));
 
     /** Netherite sprinkler — covers a 11x11 area */

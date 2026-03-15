@@ -2,6 +2,8 @@ package com.benca.sprinklermod.client;
 
 import com.benca.sprinklermod.block.BlockRegistry;
 import com.benca.sprinklermod.block.SprinklerBlock;
+import com.benca.sprinklermod.blockentity.GutterBlockEntity;
+import com.benca.sprinklermod.blockentity.SprinklerBlockEntity;
 import com.benca.sprinklermod.growth.PlantGrowthTicker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -89,6 +91,17 @@ public class SprinklerParticleHandler {
     private static void spawnParticlesForSprinkler(Level level,
                                                    BlockPos sprinklerPos,
                                                    SprinklerBlock sprinkler) {
+
+        // Check the gutter directly above for fluid instead of the sprinkler entity
+        // Check the gutter directly above for fluid
+        BlockPos abovePos = sprinklerPos.above();
+        if (level.getBlockEntity(abovePos) instanceof GutterBlockEntity gutterEntity) {
+            if (gutterEntity.getCurrentFluidId().isEmpty()) return;
+        } else {
+            return;
+        }
+
+
         int radius = sprinkler.getTier().radius;
 
         // TODO: Replace hardcoded fluidId with real fluid from GutterBlockEntity

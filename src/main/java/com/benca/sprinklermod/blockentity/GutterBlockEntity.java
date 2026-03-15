@@ -48,7 +48,6 @@ public class GutterBlockEntity extends BlockEntity {
     private int tickCounter = 0;
 
     /** I only propagate fluid and grow plants every this many ticks */
-    private static final int TICK_RATE = 1500; // roughly every 5min but the tick might need to be 6000
     /**
      * I store the fluid currently flowing through me.
      * Empty string means no fluid — sprinkler below me does nothing.
@@ -114,10 +113,6 @@ public class GutterBlockEntity extends BlockEntity {
      * @param pos   My position
      */
     public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
-        // Only process every TICK_RATE ticks — prevents insane growth speed
-        tickCounter++;
-        if (tickCounter < TICK_RATE) return;
-        tickCounter = 0;
 
         // Reset received state at the start of each tick
         receivedFluidThisTick = false;
@@ -140,6 +135,10 @@ public class GutterBlockEntity extends BlockEntity {
             // No fluid received — clear my fluid so I stop passing it on
             currentFluidId = "";
         }
+
+        // Sync fluid state to client so particles work
+        setChanged();
+        level.sendBlockUpdated(pos, getBlockState(), getBlockState(), 3);
     }
 
     // -------------------------------------------------------------------------
@@ -262,15 +261,11 @@ public class GutterBlockEntity extends BlockEntity {
      */
     private void feedSprinklerBelow(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
         BlockPos belowPos = pos.below();
-        BlockState belowState = level.getBlockState(belowPos);
 
-        if (belowState.getBlock() instanceof com.benca.sprinklermod.block.SprinklerBlock sprinkler) {
-            com.benca.sprinklermod.growth.PlantGrowthTicker.tickArea(
-                    sprinkler.getTier(),
-                    currentFluidId,
-                    level,
-                    belowPos
-            );
+        // Check if there is a sprinkler block entity below me
+        if (level.getBlockEntity(belowPos) instanceof SprinklerBlockEntity sprinklerEntity) {
+            // Pass fluid to the sprinkler entity — it handles growth itself
+            sprinklerEntity.receiveFluid(currentFluidId);
         }
     }
 
@@ -300,5 +295,25 @@ public class GutterBlockEntity extends BlockEntity {
     public void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         currentFluidId = tag.getString("fluidId");
+    }
+
+    /**
+     * I tell Minecraft to send my data to the client when I change.
+     * Without this the client cannot read my fluidId for particle effects.
+     */
+    @Override
+    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /**
+     * I provide the data to send to the client in the update packet.
+     *
+     * @param registries The registry lookup provider
+     * @return           My NBT data to send to the client
+     */
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 }

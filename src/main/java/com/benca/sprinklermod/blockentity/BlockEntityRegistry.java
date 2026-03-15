@@ -46,6 +46,27 @@ public class BlockEntityRegistry {
                             .of(GutterBlockEntity::new, BlockRegistry.GUTTER.get())
                             .build(null));
 
+    /** I am the block entity type for all sprinkler blocks */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SprinklerBlockEntity>> SPRINKLER =
+            BLOCK_ENTITIES.register("sprinkler", () ->
+                    BlockEntityType.Builder
+                            .of(
+                                    (pos, state) -> {
+                                        // Work out which tier this block is and pass it to the entity
+                                        if (state.getBlock() instanceof com.benca.sprinklermod.block.SprinklerBlock sprinkler) {
+                                            return new SprinklerBlockEntity(sprinkler.getTier(), pos, state);
+                                        }
+                                        // Fallback — should never happen
+                                        return new SprinklerBlockEntity(com.benca.sprinklermod.growth.SprinklerTier.COPPER, pos, state);
+                                    },
+                                    BlockRegistry.COPPER_SPRINKLER.get(),
+                                    BlockRegistry.IRON_SPRINKLER.get(),
+                                    BlockRegistry.GOLD_SPRINKLER.get(),
+                                    BlockRegistry.DIAMOND_SPRINKLER.get(),
+                                    BlockRegistry.NETHERITE_SPRINKLER.get()
+                            )
+                            .build(null));
+
     // -------------------------------------------------------------------------
     // Registration
     // -------------------------------------------------------------------------

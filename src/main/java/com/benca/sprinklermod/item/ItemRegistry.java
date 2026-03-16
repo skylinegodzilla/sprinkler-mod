@@ -8,6 +8,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.minecraft.core.registries.BuiltInRegistries;
+import com.benca.sprinklermod.item.TankItem;
 
 /**
  * I register every item in the mod with Minecraft's item registry.
@@ -70,6 +71,12 @@ public class ItemRegistry {
     public static final DeferredHolder<Item, BlockItem> GUTTER_ITEM =
             ITEMS.register("gutter",
                     () -> new BlockItem(BlockRegistry.GUTTER.get(),
+                            new Item.Properties()));
+
+    /** I am the item form of the tank block */
+    public static final DeferredHolder<Item, TankItem> TANK_ITEM =
+            ITEMS.register("tank",
+                    () -> new TankItem(BlockRegistry.TANK.get(),
                             new Item.Properties()));
 
     // -------------------------------------------------------------------------

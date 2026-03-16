@@ -67,6 +67,13 @@ public class BlockEntityRegistry {
                             )
                             .build(null));
 
+    /** I am the block entity type for the tank block */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TankBlockEntity>> TANK =
+            BLOCK_ENTITIES.register("tank", () ->
+                    BlockEntityType.Builder
+                            .of(TankBlockEntity::new, BlockRegistry.TANK.get())
+                            .build(null));
+
     // -------------------------------------------------------------------------
     // Registration
     // -------------------------------------------------------------------------

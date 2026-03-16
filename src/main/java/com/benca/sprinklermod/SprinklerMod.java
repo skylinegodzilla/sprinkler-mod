@@ -44,6 +44,7 @@ public class SprinklerMod {
      * @param modEventBus  The mod-specific event bus from NeoForge
      * @param modContainer The mod container from NeoForge
      */
+    // !!!!!!Basicley this is the entry point class, and below is the 3 clases that lodes all the parts of the mod into mincraft. from there they trickle down into the other files!!!!!!
     public SprinklerMod(IEventBus modEventBus, ModContainer modContainer) {
         // Register the block module
         BlockRegistry.register(modEventBus);

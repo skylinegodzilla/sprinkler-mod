@@ -99,6 +99,15 @@ public class BlockRegistry {
                                     .sound(SoundType.METAL)
                                     .requiresCorrectToolForDrops()));
 
+    /** Tank block — multiblock cauldron structure that stores and feeds fluid */
+    public static final DeferredHolder<Block, TankBlock> TANK =
+            BLOCKS.register("tank",
+                    () -> new TankBlock(
+                            BlockBehaviour.Properties.of()
+                                    .strength(1.5f, 4.0f)
+                                    .sound(SoundType.COPPER)
+                                    .requiresCorrectToolForDrops()));
+
     // -------------------------------------------------------------------------
     // Registration
     // -------------------------------------------------------------------------

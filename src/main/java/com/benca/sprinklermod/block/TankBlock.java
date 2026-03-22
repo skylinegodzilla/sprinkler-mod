@@ -114,7 +114,7 @@ public class TankBlock extends BaseEntityBlock {
                 player.sendSystemMessage(
                         net.minecraft.network.chat.Component.literal(
                                 "Tank: " + current + "/" + capacity
-                                        + " Droplets (" + percent + "% full)"));
+                                        + " Droplets (" + percent + "% full)" + "Cooldown:" + master.cooldown + " IsEmpty: " + master.isEmpty));
             }
         }
 

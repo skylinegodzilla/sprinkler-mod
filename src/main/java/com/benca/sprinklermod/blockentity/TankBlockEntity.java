@@ -90,6 +90,10 @@ public class TankBlockEntity extends BlockEntity {
     /** I count ticks for fill rate throttling */
     private int fillTickCounter = 0;
 
+    public Boolean isEmpty = false;
+
+    public int cooldown = 0;
+
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
@@ -120,10 +124,27 @@ public class TankBlockEntity extends BlockEntity {
         if (fillTickCounter < FILL_RATE) return;
         fillTickCounter = 0;
 
-        int totalWaterInputs = countWaterInputsForStructure(level);
-        if (totalWaterInputs == 0) return;
+        if (fluidUnits <= 1  && isEmpty == false) {
+            cooldown = 10;
+            isEmpty = true;
+        }
 
-        addFluid(totalWaterInputs * FILL_AMOUNT, level);
+        if(cooldown > 0) {
+            cooldown --;
+            if(cooldown == 0) {
+                int totalWaterInputs = countWaterInputsForStructure(level);
+                if (totalWaterInputs == 0) return;
+
+                addFluid(totalWaterInputs * FILL_AMOUNT, level);
+                addFluid(totalWaterInputs * FILL_AMOUNT, level);
+                isEmpty = false;
+            }
+        } else {
+            int totalWaterInputs = countWaterInputsForStructure(level);
+            if (totalWaterInputs == 0) return;
+
+            addFluid(totalWaterInputs * FILL_AMOUNT, level);
+        }
     }
 
     // -------------------------------------------------------------------------

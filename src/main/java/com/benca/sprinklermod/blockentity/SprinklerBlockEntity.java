@@ -9,6 +9,8 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import com.benca.sprinklermod.blockentity.TankBlockEntity;
+import com.benca.sprinklermod.blockentity.GutterBlockEntity;
 
 /**
  * I am the memory attached to every sprinkler block.
@@ -68,10 +70,27 @@ public class SprinklerBlockEntity extends BlockEntity {
     private int ticksSinceLastFluid = 0;
 
     /** If I haven't received fluid in this many ticks I consider myself dry */
-    private static final int FLUID_TIMEOUT = 100;
+    private static final int FLUID_TIMEOUT = 2;
 
     /** I control how many ticks between each growth application */
     private static final int GROWTH_TICK_RATE = 1500;
+
+    /** I store the position of the tank supplying my gutter chain */
+    private BlockPos supplyingTankPos = null;
+
+    public void setSupplyingTankPos(BlockPos pos) {
+        this.supplyingTankPos = pos;
+    }
+
+    public BlockPos getSupplyingTankPos() {
+        return supplyingTankPos;
+    }
+
+    /** I control how many ticks between each tank drain */
+    private static final int DRAIN_TICK_RATE = 60;
+
+    /** I count ticks between tank drains */
+    private int drainTickCounter = 0;
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -140,19 +159,51 @@ public class SprinklerBlockEntity extends BlockEntity {
             }
             receivedFluidThisTick = false;
             tickCounter = 0;
+            drainTickCounter = 0;
             return;
         }
 
-        // Apply growth on the gutter's tick rate
+        // Drain the tank on the drain tick rate — independent of growth
+        if (receivedFluidThisTick && !currentFluidId.isEmpty()) {
+            drainTickCounter++;
+            if (drainTickCounter >= DRAIN_TICK_RATE) {
+                drainTickCounter = 0;
+                TankBlockEntity tank = null;
+                if (supplyingTankPos != null) {
+                    if (level.getBlockEntity(supplyingTankPos) instanceof TankBlockEntity t) {
+                        tank = t;
+                    }
+                }
+                if (tank != null) {
+                    tank.requestFluid(level, 1, currentFluidId);
+                }
+            }
+        }
+
+        // Grow plants on the growth tick rate — independent of drain
         if (receivedFluidThisTick && !currentFluidId.isEmpty() && tickCounter >= GROWTH_TICK_RATE) {
-            PlantGrowthTicker.tickArea(tier, currentFluidId, level, pos);
             tickCounter = 0;
+            PlantGrowthTicker.tickArea(tier, currentFluidId, level, pos);
             setChanged();
             level.sendBlockUpdated(pos, getBlockState(), getBlockState(), 3);
         }
 
         receivedFluidThisTick = false;
     }
+
+    /**
+     * I am called when the gutter above me is broken.
+     * I immediately stop receiving fluid.
+     */
+    public void clearFluid() {
+        this.receivedFluidThisTick = false;
+        this.currentFluidId = "";
+        setChanged();
+    }
+
+
+
+
 
     // -------------------------------------------------------------------------
     // Client sync — sends block entity data to the client so particles work

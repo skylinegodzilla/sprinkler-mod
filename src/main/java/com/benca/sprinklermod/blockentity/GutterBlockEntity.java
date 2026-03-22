@@ -17,27 +17,29 @@ import net.minecraft.world.level.block.Blocks;
  *
  * HOW FLUID PROPAGATION WORKS:
  *   Each tick I check my sources in this priority order:
- *     1. Is there a water source directly adjacent to me horizontally?
- *     2. Did the gutter directly above me pass fluid down to me?
- *     3. Did a gutter behind me (on any horizontal axis) pass fluid to me?
- *   If any source gave me fluid, I pass it forward:
- *     - To the gutter in front of me (same horizontal axis)
+ *     1. Did the gutter directly above me pass fluid down to me?
+ *     2. Did the gutter directly behind me (opposite of my facing) pass fluid to me?
+ *   If I received fluid I pass it forward:
+ *     - To the gutter in front of me (my facing direction only)
  *     - Down to the gutter directly below me (waterfall)
  *     - Down to any sprinkler directly below me
  *
  * THE PROPAGATION CHAIN PATTERN:
  *   No gutter needs to know where the tank or source is.
  *   Each gutter just asks "did I receive fluid this tick?"
- *   and if yes, passes it forward. The chain does the rest.
+ *   and if yes, passes it forward in its facing direction.
+ *   Fluid can only flow one way through each gutter — no feedback loops.
  *
- * TODO: Wire up to TankBlockEntity when tank is built.
- * TODO: Wire up to SprinklerBlockEntity when sprinkler entity is built.
- *   For now, directly calls PlantGrowthTicker as a stub.
+ * DIRECTIONAL FLOW:
+ *   Each gutter has a FACING direction set when placed.
+ *   Fluid enters from the opposite of FACING and exits through FACING.
+ *   This prevents feedback loops in branching gutter networks.
  *
  * CODE SMELL WARNING:
  *   String fluid identifier is a temporary placeholder.
  *   Flagged for refactor when FluidRegistry is built.
  */
+
 public class GutterBlockEntity extends BlockEntity {
 
     // -------------------------------------------------------------------------
@@ -64,6 +66,13 @@ public class GutterBlockEntity extends BlockEntity {
      * in the propagation chain.
      */
     private boolean receivedFluidThisTick = false;
+
+    /** I store a reference to the tank supplying this chain */
+    private BlockPos supplyingTankPos = null;
+
+    public BlockPos getSupplyingTankPos() {
+        return supplyingTankPos;
+    }
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -117,8 +126,8 @@ public class GutterBlockEntity extends BlockEntity {
         // Reset received state at the start of each tick
         receivedFluidThisTick = false;
 
-        // Step 1 — check if a water source is directly adjacent to me
-        checkAdjacentWaterSource(level, pos);
+        // Step 1 — check if a tank directly above me has fluid
+        checkTankAbove(level, pos);
 
         // Step 2 — check if the gutter directly above me passed fluid down
         checkGutterAbove(level, pos);
@@ -146,22 +155,20 @@ public class GutterBlockEntity extends BlockEntity {
     // -------------------------------------------------------------------------
 
     /**
-     * I check all four horizontal directions for a water source block.
-     * If I find one, I accept water as my fluid.
+     * I check if there is a tank block directly above me with fluid.
+     * If there is, I accept fluid from it as my source.
      *
-     * TODO: Also check for fertilised water source when FluidRegistry is built.
-     *
-     * @param level The server world
+     * @param level The server wForld
      * @param pos   My position
      */
-    private void checkAdjacentWaterSource(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
-        for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos neighbourPos = pos.relative(direction);
-            BlockState neighbourState = level.getBlockState(neighbourPos);
+    private void checkTankAbove(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
+        if (receivedFluidThisTick) return;
 
-            if (neighbourState.getBlock() == Blocks.WATER) {
+        BlockPos abovePos = pos.above();
+        if (level.getBlockEntity(abovePos) instanceof TankBlockEntity tank) {
+            if (tank.getFluidUnits() > 0) {
                 receiveFluid(GrowthHandler.FLUID_WATER);
-                return;
+                supplyingTankPos = abovePos;
             }
         }
     }
@@ -178,19 +185,19 @@ public class GutterBlockEntity extends BlockEntity {
 
         BlockPos abovePos = pos.above();
         if (level.getBlockEntity(abovePos) instanceof GutterBlockEntity gutterAbove) {
-            if (!gutterAbove.getCurrentFluidId().isEmpty()) {
+            if (gutterAbove.receivedFluidThisTick) {
                 receiveFluid(gutterAbove.getCurrentFluidId());
+                supplyingTankPos = gutterAbove.getSupplyingTankPos();
             }
         }
     }
 
     /**
-     * I check all four horizontal directions for a gutter that
-     * has fluid and is passing it to me. This is how the
-     * propagation chain works along a horizontal run of gutters.
+     * I check the block directly behind me (opposite of my facing direction)
+     * for a gutter that received fluid this tick.
      *
-     * I only accept from one direction — the first one I find
-     * with fluid. This prevents weird behaviour at dead ends.
+     * By only accepting from one specific direction I prevent feedback loops —
+     * fluid can only travel through me in one direction.
      *
      * @param level The server world
      * @param pos   My position
@@ -198,13 +205,14 @@ public class GutterBlockEntity extends BlockEntity {
     private void checkGuttersBehind(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
         if (receivedFluidThisTick) return;
 
-        for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos neighbourPos = pos.relative(direction);
-            if (level.getBlockEntity(neighbourPos) instanceof GutterBlockEntity neighbourGutter) {
-                if (!neighbourGutter.getCurrentFluidId().isEmpty()) {
-                    receiveFluid(neighbourGutter.getCurrentFluidId());
-                    return;
-                }
+        Direction facing = getFacing(level, pos);
+        Direction inputDirection = facing.getOpposite();
+        BlockPos inputPos = pos.relative(inputDirection);
+
+        if (level.getBlockEntity(inputPos) instanceof GutterBlockEntity neighbourGutter) {
+            if (neighbourGutter.receivedFluidThisTick) {
+                receiveFluid(neighbourGutter.getCurrentFluidId());
+                supplyingTankPos = neighbourGutter.getSupplyingTankPos();
             }
         }
     }
@@ -214,22 +222,23 @@ public class GutterBlockEntity extends BlockEntity {
     // -------------------------------------------------------------------------
 
     /**
-     * I pass my fluid forward to the next gutter in the horizontal chain.
-     * I check all four horizontal directions — the first connected gutter
-     * that has NOT yet received fluid this tick gets it from me.
+     * I pass my fluid to the gutter directly in front of me (my facing direction).
      *
-     * This prevents fluid from flowing backwards up the chain.
+     * By only passing in one specific direction I prevent feedback loops —
+     * fluid can only travel through me in one direction.
      *
      * @param level The server world
      * @param pos   My position
      */
+
     private void propagateForward(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
-        for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos neighbourPos = pos.relative(direction);
-            if (level.getBlockEntity(neighbourPos) instanceof GutterBlockEntity neighbourGutter) {
-                if (!neighbourGutter.receivedFluidThisTick) {
-                    neighbourGutter.receiveFluid(currentFluidId);
-                }
+        // Only pass fluid in my facing direction
+        Direction facing = getFacing(level, pos);
+        BlockPos outputPos = pos.relative(facing);
+
+        if (level.getBlockEntity(outputPos) instanceof GutterBlockEntity neighbourGutter) {
+            if (!neighbourGutter.receivedFluidThisTick) {
+                neighbourGutter.receiveFluid(currentFluidId);
             }
         }
     }
@@ -261,12 +270,26 @@ public class GutterBlockEntity extends BlockEntity {
      */
     private void feedSprinklerBelow(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
         BlockPos belowPos = pos.below();
-
-        // Check if there is a sprinkler block entity below me
         if (level.getBlockEntity(belowPos) instanceof SprinklerBlockEntity sprinklerEntity) {
-            // Pass fluid to the sprinkler entity — it handles growth itself
             sprinklerEntity.receiveFluid(currentFluidId);
+            sprinklerEntity.setSupplyingTankPos(supplyingTankPos);
         }
+    }
+
+    /**
+     * I return the direction fluid flows out of me by reading
+     * my block's facing from the world.
+     *
+     * @param level The world
+     * @param pos   My position
+     * @return      The direction fluid flows out
+     */
+    private Direction getFacing(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (state.hasProperty(com.benca.sprinklermod.block.GutterBlock.FACING)) {
+            return state.getValue(com.benca.sprinklermod.block.GutterBlock.FACING);
+        }
+        return Direction.SOUTH; // fallback
     }
 
     // -------------------------------------------------------------------------

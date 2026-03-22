@@ -2,6 +2,7 @@ package com.benca.sprinklermod.block;
 
 import com.benca.sprinklermod.blockentity.BlockEntityRegistry;
 import com.benca.sprinklermod.blockentity.GutterBlockEntity;
+import com.benca.sprinklermod.blockentity.SprinklerBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -12,6 +13,17 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
+
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
+
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.BlockHitResult;
 
 
 /**
@@ -39,17 +51,23 @@ import org.jetbrains.annotations.Nullable;
 public class GutterBlock extends BaseEntityBlock {
 
     // -------------------------------------------------------------------------
+    // Properties
+    // -------------------------------------------------------------------------
+
+    /** I store which direction fluid flows out of me */
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+
+    // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
 
     /**
-     * I am constructed with standard block properties.
-     * My visual and physical properties are defined in BlockRegistry.
-     *
-     * @param properties Standard Minecraft block properties
+     * I set my default state to face south when first registered.
+     * Call this in the constructor.
      */
     public GutterBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.SOUTH));
     }
 
     // -------------------------------------------------------------------------
@@ -105,6 +123,20 @@ public class GutterBlock extends BaseEntityBlock {
                         blockEntity.tick((ServerLevel) serverLevel, pos));
     }
 
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos,
+                         BlockState newState, boolean movedByPiston) {
+        if (!level.isClientSide()) {
+            // Clear the sprinkler below immediately when this gutter is broken
+            BlockPos below = pos.below();
+            if (level.getBlockEntity(below) instanceof SprinklerBlockEntity sprinkler) {
+                sprinkler.clearFluid();
+            }
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
     // -------------------------------------------------------------------------
     // Rendering
     // -------------------------------------------------------------------------
@@ -120,5 +152,40 @@ public class GutterBlock extends BaseEntityBlock {
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    /**
+     * I face away from the player when placed — fluid flows away from them.
+     */
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
+
+    /**
+     * I register FACING as part of my blockstate.
+     */
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level,
+                                            BlockPos pos, Player player,
+                                            BlockHitResult hitResult) {
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
+
+        Direction facing = state.getValue(FACING);
+        String facingName = facing.getName().substring(0, 1).toUpperCase() + facing.getName().substring(1);
+
+        if (level.getBlockEntity(pos) instanceof GutterBlockEntity gutter) {
+            String fluid = gutter.getCurrentFluidId().isEmpty() ? "Empty" : "Water";
+            player.sendSystemMessage(
+                    net.minecraft.network.chat.Component.literal(
+                            "Gutter | Facing: " + facingName + " | Fluid: " + fluid));
+        }
+
+        return InteractionResult.SUCCESS;
     }
 }

@@ -9,8 +9,6 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Fluids;
-
 /**
  * I am the memory attached to every tank block.
  *
@@ -57,7 +55,7 @@ public class TankBlockEntity extends BlockEntity {
     public static final int FILL_AMOUNT = 1;
 
     /** I fill every this many ticks per water input */
-    public static final int FILL_RATE = 500;
+    public static final int FILL_RATE = 20;
 
     /** I hold this many units per tank block in the structure */
     public static final int CAPACITY_PER_BLOCK = 64;
@@ -98,6 +96,34 @@ public class TankBlockEntity extends BlockEntity {
 
     public TankBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityRegistry.TANK.get(), pos, state);
+    }
+
+    // -------------------------------------------------------------------------
+    // Tick logic
+    // -------------------------------------------------------------------------
+
+    /**
+     * I am called every game tick by TankBlock.
+     *
+     * I only handle filling the pool from water above me.
+     * Gutters pull fluid from me directly by checking if I am above them —
+     * I do not push fluid into gutters.
+     *
+     * @param level The server world
+     * @param pos   My position
+     */
+    public void tick(ServerLevel level, BlockPos pos) {
+        if (!isPartOfStructure()) return;
+        if (!isMaster()) return;
+
+        fillTickCounter++;
+        if (fillTickCounter < FILL_RATE) return;
+        fillTickCounter = 0;
+
+        int totalWaterInputs = countWaterInputsForStructure(level);
+        if (totalWaterInputs == 0) return;
+
+        addFluid(totalWaterInputs * FILL_AMOUNT, level);
     }
 
     // -------------------------------------------------------------------------
@@ -243,38 +269,6 @@ public class TankBlockEntity extends BlockEntity {
         return masterPos;
     }
 
-    // -------------------------------------------------------------------------
-    // Tick logic
-    // -------------------------------------------------------------------------
-
-    /**
-     * I am called every game tick by TankBlock.
-     *
-     * I check for flowing water adjacent to me and fill the pool.
-     * Only the master block manages the pool — members just check
-     * for water and tell the master to fill.
-     *
-     * @param level The server world
-     * @param pos   My position
-     */
-    public void tick(ServerLevel level, BlockPos pos) {
-        if (!isPartOfStructure()) return;
-
-        // Only the master handles filling
-        if (!isMaster()) return;
-
-        fillTickCounter++;
-        if (fillTickCounter < FILL_RATE) return;
-        fillTickCounter = 0;
-
-        // Count water inputs across all blocks in the structure
-        int totalWaterInputs = countWaterInputsForStructure(level);
-        if (totalWaterInputs == 0) return;
-
-        addFluid(totalWaterInputs * FILL_AMOUNT, level);
-        System.out.println("Tank filled | waterInputs: " + totalWaterInputs + " | fluidUnits: " + fluidUnits);
-    }
-
     /**
      * I count water inputs for the entire structure by checking above
      * every tank block in the structure.
@@ -399,5 +393,33 @@ public class TankBlockEntity extends BlockEntity {
                     tag.getInt("masterZ")
             );
         }
+    }
+
+    /**
+     * I feed fluid down into any gutter directly below me.
+     * Called after a successful fill tick.
+     *
+     * @param level The world
+     */
+    private void feedGuttersBelow(ServerLevel level) {
+        for (BlockPos structurePos : getStructurePositions(level)) {
+            BlockPos below = structurePos.below();
+            if (level.getBlockEntity(below) instanceof GutterBlockEntity gutter) {
+                gutter.receiveFluid(GrowthHandler.FLUID_WATER);
+            }
+        }
+    }
+
+    /**
+     * I return all positions in this structure by re-validating.
+     *
+     * @param level The world
+     * @return      All structure positions
+     */
+    private java.util.List<BlockPos> getStructurePositions(ServerLevel level) {
+        com.benca.sprinklermod.tank.TankMultiblockValidator.ValidationResult result =
+                com.benca.sprinklermod.tank.TankMultiblockValidator.validate(level, worldPosition);
+        if (result.isValid) return result.positions;
+        return java.util.Collections.emptyList();
     }
 }

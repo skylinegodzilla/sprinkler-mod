@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -16,6 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -110,6 +112,28 @@ public class SprinklerBlock extends BaseEntityBlock {
         return createTickerHelper(type, BlockEntityRegistry.SPRINKLER.get(),
                 (serverLevel, pos, blockState, blockEntity) ->
                         blockEntity.tick((ServerLevel) serverLevel, pos));
+    }
+
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level,
+                                            BlockPos pos, Player player,
+                                            BlockHitResult hitResult) {
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
+
+        if (level.getBlockEntity(pos) instanceof SprinklerBlockEntity sprinkler) {
+            BlockPos tankPos = sprinkler.getSupplyingTankPos();
+            if (tankPos == null) {
+                player.sendSystemMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "Sprinkler | No tank connected"));
+            } else {
+                player.sendSystemMessage(
+                        net.minecraft.network.chat.Component.literal(
+                                "Sprinkler | Tank at: " + tankPos));
+            }
+        }
+
+        return InteractionResult.SUCCESS;
     }
 
     // -------------------------------------------------------------------------

@@ -166,9 +166,16 @@ public class GutterBlockEntity extends BlockEntity {
 
         BlockPos abovePos = pos.above();
         if (level.getBlockEntity(abovePos) instanceof TankBlockEntity tank) {
-            if (tank.getFluidUnits() > 0) {
+            // Always delegate to master — members don't own the fluid pool
+            TankBlockEntity master = tank;
+            if (!tank.isMaster() && tank.getMasterPos() != null) {
+                if (level.getBlockEntity(tank.getMasterPos()) instanceof TankBlockEntity m) {
+                    master = m;
+                }
+            }
+            if (master.getFluidUnits() > 0) {
                 receiveFluid(GrowthHandler.FLUID_WATER);
-                supplyingTankPos = abovePos;
+                supplyingTankPos = master.getBlockPos();
             }
         }
     }

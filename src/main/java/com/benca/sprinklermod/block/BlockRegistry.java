@@ -52,7 +52,11 @@ public class BlockRegistry {
                             BlockBehaviour.Properties.of()
                                     .strength(0.1f, 8.0f)
                                     .sound(SoundType.COPPER)
-                                    .requiresCorrectToolForDrops()));
+                                    .requiresCorrectToolForDrops()
+                                    .noOcclusion()
+                    )
+            );
+
 
     /** Iron sprinkler — covers a 5x5 area */
     public static final DeferredHolder<Block, SprinklerBlock> IRON_SPRINKLER =
@@ -61,7 +65,9 @@ public class BlockRegistry {
                             BlockBehaviour.Properties.of()
                                     .strength(0.5f,8.0f)
                                     .sound(SoundType.METAL)
-                                    .requiresCorrectToolForDrops()));
+                                    .requiresCorrectToolForDrops()
+                                    .noOcclusion()
+                    ));
 
     /** Gold sprinkler — covers a 7x7 area */
     public static final DeferredHolder<Block, SprinklerBlock> GOLD_SPRINKLER =
@@ -70,7 +76,9 @@ public class BlockRegistry {
                             BlockBehaviour.Properties.of()
                                     .strength(0.5f, 8.0f)
                                     .sound(SoundType.METAL)
-                                    .requiresCorrectToolForDrops()));
+                                    .requiresCorrectToolForDrops()
+                                    .noOcclusion()
+                    ));
 
     /** Diamond sprinkler — covers a 9x9 area */
     public static final DeferredHolder<Block, SprinklerBlock> DIAMOND_SPRINKLER =
@@ -79,7 +87,9 @@ public class BlockRegistry {
                             BlockBehaviour.Properties.of()
                                     .strength(1.0f,8.0f)
                                     .sound(SoundType.METAL)
-                                    .requiresCorrectToolForDrops()));
+                                    .requiresCorrectToolForDrops()
+                                    .noOcclusion()
+                    ));
 
     /** Netherite sprinkler — covers a 11x11 area */
     public static final DeferredHolder<Block, SprinklerBlock> NETHERITE_SPRINKLER =
@@ -88,7 +98,9 @@ public class BlockRegistry {
                             BlockBehaviour.Properties.of()
                                     .strength(5.0f, 1200.0f)
                                     .sound(SoundType.NETHERITE_BLOCK)
-                                    .requiresCorrectToolForDrops()));
+                                    .requiresCorrectToolForDrops()
+                                    .noOcclusion()
+                    ));
 
     /** Gutter block — carries fluid from water sources to sprinklers */
     public static final DeferredHolder<Block, GutterBlock> GUTTER =

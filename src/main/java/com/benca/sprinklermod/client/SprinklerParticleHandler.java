@@ -118,7 +118,7 @@ public class SprinklerParticleHandler {
             double ringRadius = 0.8;
             double spawnX = sprinklerPos.getX() + 0.5 + Math.cos(angle) * ringRadius;
             double spawnZ = sprinklerPos.getZ() + 0.5 + Math.sin(angle) * ringRadius;
-            double spawnY = sprinklerPos.getY() - 0.3;
+            double spawnY = sprinklerPos.getY() + 0.5;
 
             double velocityX = Math.cos(angle) * 0.10 *(radius*0.5);
             double velocityZ = Math.sin(angle) * 0.10 *(radius*0.5);
